@@ -1,0 +1,12 @@
+# Re-check the VRAM quarantine after a suspend or hibernate cycle, when the NVIDIA driver saves and restores video
+# memory. vrampill2 re-checks on SIGUSR1 (fd mode: a CUDA context for about a second). Harmless if it isn't running.
+[Unit]
+Description=vrampill2: re-check the VRAM quarantine after resume
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target nvidia-resume.service
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/bin/systemctl kill --signal=USR1 --kill-whom=main vrampill2.service
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

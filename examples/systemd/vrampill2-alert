@@ -1,0 +1,14 @@
+#!/bin/sh
+# vrampill2-alert: the VRAM quarantine is not known to hold (vrampill2.service failed, or a re-check found the
+# fault gone from the held memory). Logs at critical priority and shows a desktop notification to every logged-in
+# user, so nobody keeps using the card without knowing. Run by vrampill2-alert.service.
+msg="VRAM quarantine NOT known to hold. Check 'systemctl status vrampill2' before using that card."
+logger -p daemon.crit -t vrampill2 "$msg"
+for d in /run/user/*; do
+    uid=${d##*/}
+    [ "$uid" -ge 1000 ] 2>/dev/null && [ -S "$d/bus" ] || continue
+    user=$(id -nu "$uid" 2>/dev/null) || continue
+    runuser -u "$user" -- env DBUS_SESSION_BUS_ADDRESS="unix:path=$d/bus" \
+        notify-send -u critical -a vrampill2 "vrampill2" "$msg" 2>/dev/null || true
+done
+exit 0

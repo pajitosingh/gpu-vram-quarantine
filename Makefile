@@ -28,7 +28,7 @@ endif
 # are exactly the ones most likely to have developed a bad cell.
 FLAGS := -O3 $(GENCODE) -Wno-deprecated-gpu-targets
 
-all: vramcheck vrampill
+all: vramcheck vrampill vrampill2
 
 vramcheck: src/vramcheck.cu
 	$(NVCC) $(FLAGS) -o $@ $<
@@ -36,11 +36,15 @@ vramcheck: src/vramcheck.cu
 vrampill: src/vrampill.cu
 	$(NVCC) $(FLAGS) -o $@ $<
 
+# vrampill2 uses the driver API (VMM, file-descriptor export), so it links libcuda.
+vrampill2: src/vrampill2.cu
+	$(NVCC) $(FLAGS) -o $@ $< -lcuda
+
 # Quick single-arch build for iterating.
 dev:
 	$(MAKE) ARCH=sm_86
 
 clean:
-	rm -f vramcheck vrampill
+	rm -f vramcheck vrampill vrampill2
 
 .PHONY: all dev clean

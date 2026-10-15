@@ -1,3 +1,7 @@
+> **This fork adds `vrampill2`**, a variant for a card whose fault is already known. It holds the bad memory
+> within ~2.5 s and, in its file-descriptor mode, the holder costs ~5 MiB of VRAM. It also documents a watchdog
+> blind spot (re-checks served from L2, and retention faults). See [docs/vrampill2.md](docs/vrampill2.md).
+
 # gpu-vram-quarantine
 
 Salvage an NVIDIA GPU that has a few defective VRAM cells, by holding the memory

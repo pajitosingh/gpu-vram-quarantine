@@ -1,0 +1,40 @@
+# System unit for vrampill2: hold a known VRAM fault before anything else can use the card.
+# Install: copy vrampill2 and vrampill2-alert to /usr/local/sbin/ and the three vrampill2*.service files to
+# /etc/systemd/system/, put your card's UUID (nvidia-smi -L) in ExecStart, then:
+#   systemctl daemon-reload && systemctl enable --now vrampill2.service vrampill2-resume.service
+#
+# The card is picked by UUID and the program lets the driver see only that card, so slot or index changes break
+# nothing and no other card is touched. No card with that UUID: exit 6 in ~0.1 s, nothing touched, and the unit
+# just goes inactive (success, no retries). A card already in use: exit 3 before allocating anything, no retry.
+# --hold fd keeps only the bad piece (2 MiB on Ampere) and no CUDA context, after checking through the descriptor
+# that the fault is still inside it (if not, it falls back to keeping the context).
+#
+# Watchdog without polling: systemd watches the process; OnFailure= and --alert-cmd raise a critical log entry
+# and a desktop alert; `systemctl kill -s USR1 --kill-whom=main vrampill2` re-checks on demand, and
+# vrampill2-resume.service does that after a suspend.
+#
+# Ordered before logins, the display manager, lingering user services (they start under user@.service, which
+# runs after systemd-user-sessions) and Docker. Each attempt is capped by --find-seconds; the worst case, the
+# fault not found at all (exit 4, fails closed), is 3 attempts in about 25 s.
+[Unit]
+Description=vrampill2: quarantine known-bad VRAM
+Before=systemd-user-sessions.service display-manager.service docker.service
+OnFailure=vrampill2-alert.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/local/sbin/vrampill2 --uuid GPU-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --expect 1 --find-seconds 3 --hold fd --ready-file /run/vrampill2.ready --alert-cmd "/usr/bin/systemctl start --no-block vrampill2-alert.service"
+ExecStopPost=-/usr/bin/rm -f /run/vrampill2.ready
+Restart=on-failure
+RestartSec=2
+SuccessExitStatus=6
+RestartPreventExitStatus=3
+TimeoutStartSec=20
+# If the holder died, the bad piece would go back to the pool; keep the OOM killer off this small process.
+OOMScoreAdjust=-900
+
+[Install]
+WantedBy=multi-user.target

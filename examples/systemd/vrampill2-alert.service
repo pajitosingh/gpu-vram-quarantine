@@ -1,0 +1,7 @@
+# Started by vrampill2.service on failure (OnFailure=) and by vrampill2 itself when a re-check fails (--alert-cmd).
+[Unit]
+Description=vrampill2: alert that the VRAM quarantine is not known to hold
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vrampill2-alert
